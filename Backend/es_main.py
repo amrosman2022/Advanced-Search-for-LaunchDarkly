@@ -1,6 +1,6 @@
 #import atexit
 import time
-from flask import Flask
+from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 from flask_restful import reqparse, abort, Api, Resource
 # Import the local files
@@ -11,6 +11,7 @@ import json
 import es_common
 import es_login
 import math
+import ld_importCSV
 
 #-------------------------------------------------------
 # ------------------------- Global --------------------
@@ -33,6 +34,8 @@ def Decode_Text(s):
     except:
         # Decoding failed, not Base64 encoded
         return s
+
+            
 
 #---------------------------------------------------------------------------
 #------------------------- Advanced Search Function -----------------------
@@ -73,6 +76,7 @@ class Adv_Srch(Resource):
                 es_common.s_g_user_pass = j_settings[1]['incl_ASpassword_1']
                 es_common.s_g_err_log = True if j_settings[1]['incl_ASlogging'].upper() == 'TRUE' else False
                 es_common.n_g_tablePageSize = 15    # TODO come from the DB
+                es_common.s_g_uploadDir = j_settings[1]['incl_UploadDir']
                 
             else:
                 return ('{"Error" : "Cannot read API Key"}')
@@ -102,7 +106,7 @@ class Adv_Srch(Resource):
                     a_n_Count.append(out_generateOutput.getCountTxt('flags'))
                     results = out_generateOutput.setLogs (1, a_n_Count)
                 except Exception as ex:
-                    return ('{"Error" : %s}')%ex.pgerror
+                    return ('{"Error" : %s}')%ex.__str__
             # http://192.168.2.18:8080/settings|||1=  or 2= |||data
             case 'settings':     #save /retrieve the system settings
                 s_OutputTxt = es_Settings.func_selector(inputs_list[1],inputs_list[2])
@@ -158,9 +162,15 @@ class Adv_Srch(Resource):
                 s_OutputTxt = out_generateOutput.saveCostSetting(inputs_list[1].strip(), inputs_list[2].strip())
                 if (s_OutputTxt[0] == True):
                     s_OutputTxt = 200
-            case 'copyld':  
+            case 'copyld':  # REMOVE target-project-id = api-f99f586a-c618-4cb8-a827-385f8707b4c3[personal] {http://localhost:8080/copyld%7C%7C%7Capi-f99f586a-c618-4cb8-a827-385f8707b4c3%7C%7C%7C}
                 s_OutputTxt = out_generateOutput.saveLD(inputs_list[1].strip(),inputs_list[2].strip(),inputs_list[3].strip())
                 x=1
+            case 'DeleteDB':
+                s_OutputTxt = out_generateOutput.func_DeleteDB(inputs_list[1].strip())
+                x=1
+            case 'copyCSV2LD':
+                s_OutputTxt2 = ld_importCSV.func_copyCSVtoLD(es_common.s_g_uploadDir, es_common.s_g_user_id, inputs_list[1].strip())
+                s_OutputTxt = json.dumps(s_OutputTxt2)
             case other:
                 s_OutputTxt = "404: Command missing or Not Supported...."
 
@@ -175,6 +185,9 @@ class Adv_Srch(Resource):
 #----- example: http://10.0.7.107:8080/search|||flags|||usingMobileKey :,maintainerId :|||false,%226125573d3e2a682621c1ba5f%22
 #-----------------------------------------------------------------
 api.add_resource(Adv_Srch, '/<inputs>')
+#api.add_resource(stream_status, '/stream')
+
+
 #atexit.register(ld_init.Kill_LD_Connection) 
 if __name__ == '__main__':
     es_common.b_g_is_logged_in = False

@@ -29,6 +29,7 @@ def run_URL (api_key,s_projKey, s_envKey, n_ffCnt, n_startLoad):
 def get_all_FF(api_key,s_projKey, s_envKey, n_ffCnt):
     
     ffSaved = 0
+    ffFailed = 0
     response = run_URL(api_key,s_projKey, s_envKey, n_ffCnt,0)
     if response.status_code == 200:  #504 is LD timing out due to large dataset
         FFs = response.json()
@@ -77,7 +78,7 @@ def main_all_FFs(api_key, s_projKey, s_envKey, n_ffCnt):
 
     #  ------------------------------------------------------------------------------------
     if ('jsonResults' in vars() or 'jsonResults' in globals()):
-        jsonResults = ' ,"FlagsSaved": ' + str(ffSaved) + ', "FlagsFailed": ' + str(ffFailed)
+        jsonResults = ' ,"FlagsSaved": ' + str(ffSaved) + ', "FlagsFailed": ' + str(ffSaved)
     else:
         jsonResults = ' "FlagsSaved": ' + str(ffSaved) + ', "FlagsFailed": ' + str(ffFailed)
     return jsonResults

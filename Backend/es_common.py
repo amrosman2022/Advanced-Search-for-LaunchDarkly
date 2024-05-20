@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import time
 
 
 global s_g_db_conn
@@ -13,8 +14,13 @@ global o_g_dataSetPagination
 global n_g_tablePageSize
 global n_g_paginationCnt
 global o_g_costRowQueryResults
+global s_g_uploadDir
 
-
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+def remove_chars(input_string, chars_to_remove):
+    return ''.join(char for char in input_string if char not in chars_to_remove)
 
 
 #--------------------------------------------------------------------------------

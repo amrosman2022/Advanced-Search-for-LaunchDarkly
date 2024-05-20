@@ -12,8 +12,52 @@ import psycopg2
 from psycopg2.errors import SerializationFailure
 import psycopg2.extras
 import es_common
+import inspect
+import re
 
 global cur
+
+
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+def func_DeleteTableRows(s_Table):
+    OK = openConnection ()
+    if OK == True:
+        str_SQL = 'DELETE from ' + s_Table
+        psycopg2.extras.register_uuid()
+        with conn.cursor() as cur:
+            o_returnedData = cur.execute(str_SQL)
+            o_returnedData = conn.commit()
+            logging.debug("ReturnRows: status message: %s",cur.statusmessage)
+            if cur.statusmessage == 'DELETE 1':
+                s_ErrorMsg = '{"status": "True" , "message":"[%s] Rows deleted successfully"}' %(s_Table)
+                return s_ErrorMsg
+            else:
+                s_ErrorMsg = cur.statusmessage
+                s_ErrorMsg = '{"status": "False" , "message":"[%s] deletion failed with error message [%s]"}' %(s_Table, s_ErrorMsg)
+                return s_ErrorMsg
+    else:
+        return '{"status": "False" , "message":"func_DeleteTableRows, Database connection error..."}' 
+
+#----------------------------------------------------------------------------------------------------------------
+#-----------------------------------------internal Function -----------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------
+def func_CallAPI(URL, val1, val2, RESET = False):
+    try:
+        if (RESET == True):
+            urlResponse = requests.get(f"{'http://127.0.0.1:5050/clear_status'}")
+            return True
+        if (val2 != ""):
+            api = URL + str(val1) + " of " + str(val2)
+        else:
+            api = URL + str(val1)
+        urlResponse = requests.get(f"{api}")
+        return True
+    except:
+        return False
+    
+    return True
 
 #----------------------------------------------------------------------------------------------------------------
 #------------------------------------------Internal Function-----------------------------------------------------
@@ -35,24 +79,29 @@ def func_writeFFRecordsToLD(o_Records, TargetEnvID):
         # write to destination LD Subscription
         # sleep than repeat API call if rate_limit is reached 
         retries = 0
-        while retries < 2: 
+        while retries < 3: 
             response = requests.post(url, json=payload, headers=headers)
+            chars_to_remove = '"}{\\'
+            sResponseTxt = es_common.remove_chars(response.text, chars_to_remove)
             # if the record not written to LD
             if response.ok == False:    #if failed
                 if response.status_code == 429: #if rate reached
-                    sleep_time = 3 ** retries
+                    sleep_time = 3 * retries
                     time.sleep(sleep_time)
                     retries += 1
                 else:
+                    apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", sResponseTxt, "")
                     retries = 3
                 # write error to logs
-                es_common.func_Logging(response.text)
-                s_Status = payload['key'] + "|||" + str(response.elapsed) + "|||" + response.text + "|||retries:" + str(retries)
+                es_common.func_Logging(sResponseTxt)
+                s_Status = "Flag Record Error|||" + payload['key'] + "|||" + str(response.elapsed) + "|||" + sResponseTxt + "|||retries:" + str(retries)
                 # Write the error to the DB that prevented from adding new record to LD
                 response = func_WriteStatus(2,s_Status)
             else:
                 RecsWritten += 1
                 retries = 3
+                apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", "", "")
+                apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=flag&value=", RecsWritten, len(o_Records))
 
     if RecsWritten > 0 and RecsWritten < len(o_Records):
         return True, {"function":"func_writeFFRecordsToLD", "error message": "Partial records written", "system message": "", "count": str(RecsWritten) + "/" + str(len(o_Records))}
@@ -82,15 +131,29 @@ def func_writeEnvRecordsToLD(o_Records, TargetEnvID):
         }
 
         # write to destination LD Subscription
-        response = requests.post(url, json=payload, headers=headers)
-        # if the record not written to LD
-        if response.ok == False:
-            es_common.func_Logging(response.text)
-            s_Status = payload['key'] + "|||" + str(response.elapsed) + "|||" + response.text
-            # Write the error to the DB that prevented from adding new record to LD
-            response = func_WriteStatus(2,s_Status)
-        else:
-            RecsWritten += 1
+        retries = 0
+        while retries < 3:
+            response = requests.post(url, json=payload, headers=headers)
+            chars_to_remove = '"}{\\'
+            sResponseTxt = es_common.remove_chars(response.text, chars_to_remove)
+            # if the record not written to LD
+            if response.ok == False:
+                if response.status_code == 429: #if rate reached
+                    sleep_time = 3 * retries
+                    time.sleep(sleep_time)
+                    retries += 1
+                else:
+                    apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", sResponseTxt, "")
+                    retries = 3
+                es_common.func_Logging(sResponseTxt)
+                s_Status = "Environment Record Error|||" + payload['key'] + "|||" + str(response.elapsed) + "|||" + sResponseTxt
+                # Write the error to the DB that prevented from adding new record to LD
+                response = func_WriteStatus(2,s_Status)
+            else:
+                RecsWritten += 1
+                retries = 3
+                apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", "", "")
+                apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=env&value=", RecsWritten, len(o_Records))
 
     if RecsWritten > 0 and RecsWritten < len(o_Records):
         return True, {"function":"func_writeEnvRecordsToLD", "error message": "Partial records written", "system message": "", "count": str(RecsWritten) + "/" + str(len(o_Records))}
@@ -106,6 +169,7 @@ def func_writeEnvRecordsToLD(o_Records, TargetEnvID):
 #----------------------------------------------------------------------------------------------------------------
 def func_writeProjectRecordsToLD(o_Records, TargetEnvID): 
 
+    apiStat = func_CallAPI("",0,0,True)
     url = "https://app.launchdarkly.com/api/v2/projects"
     RecsWritten = 0
 
@@ -118,15 +182,33 @@ def func_writeProjectRecordsToLD(o_Records, TargetEnvID):
         }
 
         # write to destination LD Subscription
-        response = requests.post(url, json=payload, headers=headers)
-        # if the record not written to LD
-        if response.ok == False:
-            es_common.func_Logging(response.text)
-            s_Status = payload['key'] + "|||" + str(response.elapsed) + "|||" + response.text
-            # Write the error to the DB that prevented from adding new record to LD
-            response = func_WriteStatus(2,s_Status)
-        else:
-            RecsWritten += 1
+        retries = 0
+        while retries < 3:
+            response = requests.post(url, json=payload, headers=headers)
+            chars_to_remove = '"}{\\'
+            sResponseTxt = es_common.remove_chars(response.text, chars_to_remove)
+            # if the record not written to LD
+            if response.ok == False:
+                if response.status_code == 429: #if rate reached
+                    sleep_time = 3 * retries
+                    time.sleep(sleep_time)
+                    retries += 1
+                else:
+                    if response.status_code == 401:
+                        apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", str(response.status_code) + ":Invalid Access Token", "")
+                        return False, {"function":"func_writeProjectRecordsToLD", "error message": "No records written", "system message": "410: Invalid Access Token", "count": "0"}
+                    apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", sResponseTxt, "")
+                    retries = 3
+
+                es_common.func_Logging(sResponseTxt)
+                s_Status = "Project Record Error|||" + payload['key'] + "|||" + str(response.elapsed) + "|||" + sResponseTxt
+                # Write the error to the DB that prevented from adding new record to LD
+                response = func_WriteStatus(2,s_Status)
+            else:
+                RecsWritten += 1
+                retries = 3
+                apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=error&value=", "", "")
+                apiStat = func_CallAPI("http://127.0.0.1:5050/update_status?itemname=proj&value=", RecsWritten, len(o_Records))
 
     if RecsWritten > 0 and RecsWritten < len(o_Records):
         return True, {"function":"func_writeProjectRecordsToLD", "error message": "Partial records written", "system message": "", "count": str(RecsWritten) + "/" + str(len(o_Records))}
@@ -147,22 +229,24 @@ def CopyLDtoNew (s_TargetEnvID, s_projID, s_envID):    #s_projID=thee project to
     x=0
     s_subSQLe = ""
     s_subSQLf = ""
+    s_Status = "Started Copying to Target LD Instance @" + str(time.time)
+    response = func_WriteStatus(2,s_Status)
     if (len(s_projID) > 0):
         s_subSQLe +=  "WHERE environments.s_proj_id like '%" + s_projID.lower() + "%'"
-        s_subSQLf +=  "WHERE flags.s_proj_id = '" + s_projID.lower() + "'"
+        s_subSQLf +=  "WHERE flags.s_proj_id like '%" + s_projID.lower() + "%'"
         if (len(s_envID) > 0):
             s_subSQLe += " and environments.s_env_id like '%" + s_envID.lower() + "%'"
-            s_subSQLf += " and flags.s_env_id = '" + s_envID.lower() + "'"
+            s_subSQLf += " and flags.s_env_id like '%" + s_envID.lower() + "%'"
 
         str_SQL.append ("SELECT projects.s_proj_id, projects.s_proj_data from projects WHERE projects.s_proj_id like '%" + s_projID.lower() + "%'")
         str_SQL.append ("SELECT environments.s_env_id, environments.s_proj_id, environments.s_env_data from environments " + s_subSQLe)
-        str_SQL.append ("SELECT flags.s_flag_id, flags.s_proj_id, flags.s_flag_data from flags " + s_subSQLf)
+        str_SQL.append ("SELECT s_proj_id, MAX(s_env_id) AS s_env_id, s_flag_id, MAX(s_flag_data) AS s_flag_data FROM flags " + s_subSQLf + " GROUP BY s_proj_id, s_flag_id ")
         #str_SQL.append ("SELECT environments.s_env_id, environments.s_proj_id, environments.s_env_data from environments WHERE environments.s_proj_id like '%" + s_projID.lower() + "%'")
         #str_SQL.append ("SELECT flags.s_flag_id, flags.s_proj_id, flags.s_flag_data from flags WHERE flags.s_proj_id like '%"+ s_projID.lower() + "%'")
     else:
         str_SQL.append ("SELECT projects.s_proj_id, projects.s_proj_data from projects")
         str_SQL.append ("SELECT environments.s_env_id, environments.s_proj_id, environments.s_env_data from environments")
-        str_SQL.append ("SELECT flags.s_flag_id, flags.s_proj_id, flags.s_flag_data from flags")
+        str_SQL.append ("SELECT s_proj_id, MAX(s_env_id) AS s_env_id, s_flag_id, MAX(s_flag_data) AS s_flag_data FROM flags GROUP BY s_proj_id, s_flag_id ") #only select one environment from each project as LD will create FF in the rest of Env's
         
     OK = openConnection ()
     if OK == True:
@@ -176,6 +260,12 @@ def CopyLDtoNew (s_TargetEnvID, s_projID, s_envID):    #s_projID=thee project to
                     if x==0:
                         o_StatusP = func_writeProjectRecordsToLD(o_Records, s_TargetEnvID)
                         o_a_Statuses.append(o_StatusP)
+                        if (o_StatusP[0] == False):
+                            s_ErrorMsg = o_StatusP[1]['system message']
+                            s_Status = {"function":"CopyLDtoNew", "error message": "LaunchDarkly Invalid API Access Token", "system message": s_ErrorMsg, "error id": "-400"} #-400 is API error
+                            response = func_WriteStatus(2,s_Status)
+                            return False, s_Status
+                        
                     elif x==1:
                         o_StatusE = func_writeEnvRecordsToLD(o_Records, s_TargetEnvID)
                         o_a_Statuses.append(o_StatusE)
@@ -188,11 +278,14 @@ def CopyLDtoNew (s_TargetEnvID, s_projID, s_envID):    #s_projID=thee project to
                     response = func_WriteStatus(2,s_Status)
                     return False, s_Status
             x+=1
+    
     else:
         s_Status = {"function":"CopyLDtoNew", "error message": "DB Connection failed to open...", "system message": "NA" , "error id": "-101"} #-101 is DB error
         response = func_WriteStatus(2,s_Status)
         return False, s_Status
     
+    s_Status = "Finished Copying to Target LD Instance @" + str(time.time)
+    response = func_WriteStatus(2,s_Status)
     return True, o_a_Statuses
 
 # ---------------------------------------------------------------------
@@ -315,6 +408,19 @@ def func_ReturnRows(n_MaxCount, s_Table, s_searchStr, s_SrchFld):
 
 
     return 0
+# ---------------------------------------------------------------------
+# ----------------------- Helper function -----------------------------
+# --- remove the relesae pipiline from the Flag record as this tool ---
+# ----- is not copying the Release Pipline records --------------------
+# ---------------------------------------------------------------------
+def remove_pattern(text):
+    pattern = r', "releasePipelineKey": "(.*?)"'  # Regular expression pattern
+    #matches = re.findall(pattern, text)
+    
+    # Remove the pattern and found text from the original text
+    modified_text = re.sub(pattern, '', text)
+    
+    return modified_text
 
 # ---------------------------------------------------------------------
 # ---------------------------------------------------------------------
@@ -322,13 +428,19 @@ def func_ReturnRows(n_MaxCount, s_Table, s_searchStr, s_SrchFld):
 def func_InsterFlags(s_ProjID, s_EnvID, s_FlagID, j_WriteRow):
     s_WriteRow = json.dumps(j_WriteRow)
     s_CreateDate = j_WriteRow['creationDate']
-    s_Creator = j_WriteRow['_maintainer']['email']
+    try:
+        s_Creator = j_WriteRow['_maintainer']['email']
+        #### -- Need to add code to handle the exception in case its a maintainer group instead of maintainer email
+    except:
+        s_Creator = ""
+        
     b_Archived = j_WriteRow['archived']
     s_LastModified = j_WriteRow['environments'][s_EnvID]['lastModified']
     psycopg2.extras.register_uuid()
     with conn.cursor() as cur:
-        s_Tags = JSONtoOBJ = json.loads(s_WriteRow)["tags"]     # extract the tags
-        cur.execute("UPSERT INTO flags (s_flag_unique_id, s_proj_id, s_env_id, s_flag_id, s_flag_data,s_flag_tags, s_createdate, s_creator, b_archived, s_lastmodified) VALUES(%s, %s, %s, %s, %s,%s, %s, %s, %s,%s)", (s_ProjID+'_'+s_EnvID+'_'+s_FlagID, s_ProjID, s_EnvID, s_FlagID, s_WriteRow, s_Tags, s_CreateDate, s_Creator, b_Archived, s_LastModified))
+        s_Tags = json.loads(s_WriteRow)["tags"]     # extract the tags
+        s_WriteRowModified = remove_pattern(s_WriteRow)
+        cur.execute("UPSERT INTO flags (s_flag_unique_id, s_proj_id, s_env_id, s_flag_id, s_flag_data,s_flag_tags, s_createdate, s_creator, b_archived, s_lastmodified) VALUES(%s, %s, %s, %s, %s,%s, %s, %s, %s,%s)", (s_ProjID+'_'+s_EnvID+'_'+s_FlagID, s_ProjID, s_EnvID, s_FlagID, s_WriteRowModified, s_Tags, s_CreateDate, s_Creator, b_Archived, s_LastModified))
         logging.debug("InserFlags: status message: %s",cur.statusmessage)
     conn.commit()
     return cur.statusmessage
@@ -390,7 +502,8 @@ def func_WriteStatus(n_type, a_Inputs):
         except: 
             es_common.func_Logging(o_response)
 
-        es_common.func_Logging("InsertProject: status message:" + cur.statusmessage,True, 0)
+        sCaller = inspect.stack()[1][3]
+        es_common.func_Logging(sCaller + ": status message:" + cur.statusmessage,True, 0)
     conn.commit()
     return True, cur.statusmessage
 
@@ -485,7 +598,7 @@ def func_GetCost (s_type, s_dep_id='', s_dep_name='', s_user_id=''):   #type = c
             str_SQL += ' GROUP BY u.department_id, d.department_name ORDER BY d.department_name;'
 
         case 'user':
-            str_SQL = 'SELECT u.user_id, u.department_id, d.department_name, SUM(c.cost_per_ff) AS total_cost FROM users u LEFT JOIN flags f ON u.user_id = f.s_creator JOIN cost c ON u.department_id = c.department_id JOIN departments d ON u.department_id = d.department_id'
+            str_SQL = 'SELECT u.user_id, u.department_id, d.department_name, SUM(c.cost_per_ff) AS total_cost FROM users u JOIN flags f ON u.user_id = f.s_creator JOIN cost c ON u.department_id = c.department_id JOIN departments d ON u.department_id = d.department_id'
             if len(s_dep_name+s_user_id) >0:
                 if len(s_dep_id)>0: # can only have either dept ID or Name but not both
                     str_SQL += " where u.department_id LIKE %'%s'% OR upper(u.user_id) = upper('%s')", (s_dep_id, s_user_id)

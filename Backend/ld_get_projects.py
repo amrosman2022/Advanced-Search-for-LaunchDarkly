@@ -13,14 +13,19 @@ x=0
 def get_all_projects(api_key,s_Proj_Ids, n_projCnt):
     if n_projCnt > 0:
         url = 'https://app.launchdarkly.com/api/v2/projects' + '?limit=' + str(n_projCnt)
+        if (len(s_Proj_Ids)>0):
+            url += '&filter=query:' + s_Proj_Ids
         n_totalProjects = n_projCnt
     else:
         url = 'https://app.launchdarkly.com/api/v2/projects'
+        if (len(s_Proj_Ids)>0):
+            url += '?filter=query:' + s_Proj_Ids
 
-    if (len(s_Proj_Ids) == 0):
-        headers = {'Authorization': api_key}
-    else:
-        headers = {'Authorization': api_key, 'projectKey': s_Proj_Ids}
+    headers = {'Authorization': api_key}
+    #if (len(s_Proj_Ids) == 0):
+    #    headers = {'Authorization': api_key}
+    #else:
+    #    headers = {'Authorization': api_key, 'filter=query': s_Proj_Ids}
 
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
@@ -89,8 +94,8 @@ def func_main_get_all_projects(api_key, s_ProjID, n_ffCnt):     # n_ffCnt--> 0 =
     if ('envResults' in vars() or 'envResults' in globals()):
         jsonResults = envResults + ',"ProjectsSaved": ' + str(projSaved) +  ',"ProjectsFailed": ' + str(projFailed)
     else:
+        envResults = '"FlagsSaved": 0, "FlagsFailed": 0, "EnvironmentsSaved": 0, "EnvironmentsFailed": 0, '
         jsonResults = envResults + '"ProjectsSaved": ' + str(projSaved) +  ',"ProjectsFailed": ' + str(projFailed)
-
 
     return jsonResults
 #--------------------------------------------------------------------------------

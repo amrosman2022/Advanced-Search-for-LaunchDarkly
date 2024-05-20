@@ -3,7 +3,7 @@
   <title>Flask SSE Demo</title>
 </head>
 
-<body onload="func_startStreamT('status','content1');" onbeforeunload="func_closeStream();" style="background-color: black;">
+<body onload="func_startStreamT('tblProj', 'tblEnv', 'tblFlag', 'status');" onbeforeunload="func_closeStream();" style="background-color: black;">
 
   <!-- new content appears here -->
   <P id="content1">
@@ -37,24 +37,33 @@ g_j_streamData = {};
 sOutput2 = "";
 g_s_PrevError = "";
 
-function func_startStreamT(streamName, targetID)
+const eventSource = new EventSource('http://127.0.0.1:5050/events');
+
+eventSource.onmessage = function(event) {
+    console.log('Received data:', event.data);
+};
+
+function func_startStreamT(streamName, targetID_proj, targetID_env, targetID_flag, targetID_error) 
 {
-    evtSource = new EventSource('http://127.0.0.1:5050/stream_status');
-    evtSource.addEventListener(streamName, (event) => 
+    return 0;
+    eventSource = new EventSource('http://127.0.0.1:5050/events');
+
+    eventSource.addEventListener(streamName, (event) => 
     {
+      alert(event.data);
         //const listElement = document.getElementById('list');
         //const newElement = document.getElementById(targetID);
         //newElement.innerText = event.data;
-        g_j_streamData = JSON.parse(event.data);
-        document.getElementById("tblProj").innerText = g_j_streamData.proj;
-        document.getElementById("tblEnv").innerText = g_j_streamData.env;
-        document.getElementById("tblFlag").innerText = g_j_streamData.flag;
-        if (g_s_PrevError != g_j_streamData.error)
-        {
-            sOutput2 += "<I>" + g_j_streamData.time + ": </I>" + g_j_streamData.error + "<BR>";
-            g_s_PrevError =  g_j_streamData.error;
-        }
-        document.getElementById("tblErrors").innerHTML = sOutput2;
+        //---g_j_streamData = JSON.parse(event.data);
+        //---if (targetID_proj!=''){document.getElementById(targetID_proj).innerText = g_j_streamData.proj;}
+        //---if (targetID_env!=''){document.getElementById(targetID_env).innerText = g_j_streamData.env;}
+        //---  if (targetID_flag!=''){document.getElementById(targetID_flag).innerText = g_j_streamData.flag;}
+        //---if (g_s_PrevError != g_j_streamData.error)
+        //---{
+        //---    sOutput2 += "<I>" + g_j_streamData.time + ": </I>" + g_j_streamData.error + "<BR>";
+        //---    g_s_PrevError =  g_j_streamData.error;
+        //---}
+        //---if (targetID_proj!=''){document.getElementById(targetID_error).innerHTML = sOutput2;}
         //newElement.innerHTML = sOutput + sOutput2;
     }
     );

@@ -115,11 +115,12 @@ const func_LoadValues = async () =>
           document.getElementById('incl_DBconnection').value = y.incl_DBconnection;
           document.getElementById('incl_LDkey').value = y.incl_LDkey;
           document.getElementById('incl_LDkeyname').value = y.incl_LDkeyname;
+          document.getElementById('incl_UploadDir').value = y.incl_UploadDir;
         }
       }
       catch
       {
-        func_ShowAlert('Server not Running, Please Start the Python Advanced ToolBox Server...', true);
+        func_ShowAlert('Server not Running, Please Start Advanced ToolBox Server...', true);
       }
 }
 
@@ -237,12 +238,50 @@ const func_saveSettings = async () =>
       const myJson = await response.json(); //extract TEXT from the http response
       if (JSON.parse(myJson[0])['ErrorCode']!=0)
       {
-        func_ShowAlert(JSON.parse(myJson[0])['Message'],false);
+        func_ShowAlert(JSON.parse(myJson[0])['Message'],true);
       }
       else
       {
         bol_formSaved = true;
         func_ShowAlert('Settings Saved', true);
+      }
+    }
+    catch (error)
+    {
+      func_ShowAlert(error.message, true);
+    }
+}
+
+//--------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+const func_cleanTables = async (nTableID) => 
+{
+    // ------ Start deleting the data
+    try
+    {
+      var userInput = "yes"; //window.prompt("Please enter 'yes' or 'no':");
+      userInput = userInput.toLowerCase();
+
+      // Validate user input
+      if (userInput === 'yes') {
+          //alert("You entered 'yes'.");
+      } else if (userInput === 'no') {
+          alert("You entered 'no'.");
+          return;
+      }
+      
+      s_url = 'http://localhost:8080/DeleteDB|||' + nTableID;
+      const response = await fetch(s_url);
+      const myJson = await response.json(); //extract TEXT from the http response
+      oResponse = JSON.parse(myJson);
+      if (oResponse['status']!='True')
+      {
+        func_ShowAlert(oResponse['message'],true);
+      }
+      else
+      {
+        func_ShowAlert(oResponse['message'], true);
       }
     }
     catch (error)
@@ -297,7 +336,18 @@ function func_checkChanged()
   {
     func_ShowAlert('no chage',true);
   }
-  
+}
+// ----------------------------------------------------------------
+// ----------------------------------------------------------------
+// ----------------------------------------------------------------
+function validateUploadDir(formData) {
+  // Validate it does not end with / and remove it if exists
+  formDataText = document.getElementById(formData)
+  console.log (formDataText.value);
+  if(formDataText.value.substring(formDataText.value.length-1,formDataText.value.length)== '/') {
+    formDataText.value = formDataText.value.substring(0,formDataText.value.length-1);
+    console.log (formDataText.value);
+  }
 }
 </script>
 
@@ -416,7 +466,12 @@ function func_checkChanged()
             <div data-i18n="Email">Migrate CRDB to LD</div>
           </a>
         </li>
-
+        <li class="menu-item">
+          <a href="MigrateCSVtoLDH.html" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-detail"></i>
+            <div data-i18n="Email">Migrate CSV to LD</div>
+          </a>
+        </li>
         <li class="menu-item active">
           <a href="SettingsH.html" class="menu-link">
             <i class="menu-icon tf-icons bx bx-detail"></i>
@@ -524,6 +579,9 @@ function func_checkChanged()
               <li class="nav-item">
                   <button type="button" class="nav-link" role="tab" data-bs-toggle="tab" data-bs-target="#navs-top-cost" aria-controls="navs-top-profile" aria-selected="false">Cost Config</button>
               </li>
+              <li class="nav-item">
+                <button type="button" class="nav-link" role="tab" data-bs-toggle="tab" data-bs-target="#navs-top-CleanCRDB" aria-controls="navs-top-profile" aria-selected="false">Clean CRDB</button>
+            </li>
             </ul>
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="navs-top-config" role="tabpanel">
@@ -612,6 +670,25 @@ function func_checkChanged()
                       </div>
                     </div>
 
+                    <!--- General Settings section-->
+                    <table width="100%">  <!-- Spacer and heading-->
+                      <tr align="left">
+                        <td style="padding-bottom: 10px;" width="60px"><hr style="height:3px;color:darkolivegreen"></td>
+                        <td width="10px"></td>
+                        <TD style="padding-bottom: 10px;"><B style="text-transform: capitalize;">General Settings</B></TD>
+                      </tr>
+                    </table> <!-- // END OF Spacer and heading-->
+
+                    <div class="mb-3 row"> <!-- LaunchDarkly Key -->
+                      <label for="html5-text-input" class="col-md-2 col-form-label">Server Upload Directory</label>
+                      <div class="col-md-10">
+                        <input class="form-control" type="text" value="" id="incl_UploadDir" onblur="validateUploadDir('incl_UploadDir');" /> 
+                      </div>
+                    </div>
+
+
+                    <!-- -->
+
                     <div align="center" width="100%"><!-- SUBMIT BUtton-->
                       <button type="button" class="btn btn-primary me-2" onclick="validate_form('frmSettings');">
                         <span class="tf-icons bx bx-pie-chart-alt me-1"></span> Save
@@ -626,6 +703,19 @@ function func_checkChanged()
                     </div>
 
                 </div>
+
+                <div class="tab-pane fade" id="navs-top-CleanCRDB" role="tabpanel">
+                  <!-- /\/\/\/\/\/\/\/\/\/\/ Tab2 Content /\/\/\/\/\/\/\/\/\/\/-->
+                  <div class="table-responsive" id="CleanCRDBcontrols">
+                    <table>
+                      <TR><TD>Clear all rows in Projects Table: </TD><TD><button type="button" class="btn btn-primary mb-2 d-grid w-100" data-bs-dismiss="offcanvas" onclick="func_cleanTables('1');" >Clear Projects</button></TD></TR>
+                        <TR><TD>Clear all rows in Environments Table: </TD><TD><button type="button" class="btn btn-primary mb-2 d-grid w-100" data-bs-dismiss="offcanvas" onclick="func_cleanTables('2');" >Clear Environments</button></TD></TR>
+                        <TR><TD>Clear all rows in Flags Table: </TD><TD><button type="button" class="btn btn-primary mb-2 d-grid w-100" data-bs-dismiss="offcanvas" onclick="func_cleanTables('3');" >Clear Flags</button></TD></TR>
+                    </table>
+                  </div>
+
+              </div>
+                
             </div>
           </div>
           <!-- *****************************************************-->

@@ -3,6 +3,27 @@ import json
 import es_common
 import decimal
 
+
+
+#--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
+def func_DeleteDB (s_tblID):   
+    try:
+        match s_tblID:
+            case '1':
+                n_Status = db.func_DeleteTableRows('projects')
+            case '2':
+                n_Status = db.func_DeleteTableRows('environments')
+            case '3':
+                n_Status = db.func_DeleteTableRows('flags')
+
+        return n_Status
+    except:
+        return '{"status": "False" , "message": "func_DeleteDB raised an exception..."}'
+
+
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
@@ -62,7 +83,10 @@ def createHTMLTable (s_type, n_Max_Cnt, s_tblID, s_srchCol='', s_srchCrit='', n_
                 n_Status = db.func_SrchTables (n_Max_Cnt, s_tblID, s_srchCol, s_srchCrit)
 
             if n_Status[0] != True:
-                return "db.func_ReturnRows-->" + s_tblID + ": call error..."
+                if n_Status[1] == "SELECT 0":
+                    return 0, -1
+                else:
+                    return 0, "createHTMLTable, db.func_ReturnRows-->" + s_tblID + ": call error..."
             else:
                 es_common.o_g_dataSetPagination = n_Status[1]   # Save the full dataset to a Global Variable
                 n_totalRows = len(es_common.o_g_dataSetPagination)
@@ -131,8 +155,10 @@ def setLogs (n_type, a_Inputs):  #s_Inputs = array of vars to be written to the 
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 def getCost(s_type, s_dept_id, s_dep_name, s_user_id):
-    s_return = db.func_GetCost(s_type,s_dept_id,s_dep_name, s_user_id)
+    s_return = db.func_GetCost(s_type,s_dept_id,s_dep_name, s_user_id)        
+    
     # convert to JSON
+    #data_dict = []
     if s_return[0] == True:
         data_dict = []
         match s_type:   #convert result to the UI Graph Library format
@@ -144,7 +170,9 @@ def getCost(s_type, s_dept_id, s_dep_name, s_user_id):
                     data_dict.append({"x": item['user_id'], "y": float(item['total_cost'])})
                 for value in s_return[1]:
                     es_common.o_g_costRowQueryResults[value['user_id']] = value['department_name']
-
+    else:
+       return False, {}
+    
     return True, data_dict
 
 

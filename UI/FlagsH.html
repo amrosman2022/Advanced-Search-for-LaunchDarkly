@@ -188,7 +188,7 @@
                               
                           }
                          
-                          s_srchStr += ',' + input.id + '":'; //* the field name to search for in LD = Left side of the equation
+                          s_srchStr += ',' + input.id + '":' + (input.dataset.extras==undefined?"":input.dataset.extras); //* the field name to search for in LD = Left side of the equation
                           cnt++;
                       }
                       else 
@@ -214,8 +214,8 @@
                               s_srchVal += '"' + s_srchValTemp;
                             }
                         }
-                          s_srchStr += input.id + '":'; //* the field name to search for in LD = Left side of the equation
-                          cnt++;
+                        s_srchStr += input.id + '":' + (input.dataset.extras==undefined?"":input.dataset.extras); //* the field name to search for in LD = Left side of the equation
+                        cnt++;
                       }
                   }
               }
@@ -229,6 +229,17 @@
         const myJson = await response.text() // .text(); //extract TEXT from the http response
 
         // ********************** Convert the JSON to JS Array **********************
+        if (myJson.search('-1\n')== 0)
+        {
+          // ********************** Status update **********************
+          const d2 = new Date();
+          let time2 = d2.getTime();
+          tdiff = time2-time;
+          s_tdiff = tdiff.toLocaleString("en-US")
+          document.getElementById("lbl_functionstat").innerText = "No Data found matching the search criteria";
+          document.getElementById("lbl_functioninfo").innerText = "Function execution succeeded, running for " + s_tdiff + " milliseconds...";
+          return true;
+        }
         myArray = convertXmlToArray(myJson);
         
         // ********************** Call the function to write the JS Array into a HTML Table and insert on page **********************
@@ -344,7 +355,12 @@
             <div data-i18n="Email">Migrate CRDB to LD</div>
           </a>
         </li>
-
+        <li class="menu-item">
+          <a href="MigrateCSVtoLDH.html" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-detail"></i>
+            <div data-i18n="Email">Migrate CSV to LD</div>
+          </a>
+        </li>
         <li class="menu-item">
           <a href="SettingsH.html" class="menu-link">
             <i class="menu-icon tf-icons bx bx-detail"></i>
@@ -548,9 +564,9 @@
                               <div class="input-group-text">
                                 <input id="skip_experiments" class="form-check-input mt-0" type="checkbox" onchange="func_toggleElementState(this,'experiments');">
                               </div>
-                              <select class="form-select" id="experiments">
-                                <option value="true">Has Experiments Enabled</option>
-                                <option value="false">Not Having Experiments</option>
+                              <select class="form-select" id="experiments" data-extras=' {"baselineIdx":'>
+                                <option value="2">Has Experiments Enabled</option>
+                                <option value="0">Not Having Experiments</option>
                               </select>
                             </div><!----------------------//Has Experiments------------------------>
 

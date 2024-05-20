@@ -134,7 +134,12 @@
             <div data-i18n="Email">Migrate CRDB to LD</div>
           </a>
         </li>
-
+        <li class="menu-item">
+          <a href="MigrateCSVtoLDH.html" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-detail"></i>
+            <div data-i18n="Email">Migrate CSV to LD</div>
+          </a>
+        </li>
         <li class="menu-item">
           <a href="SettingsH.html" class="menu-link">
             <i class="menu-icon tf-icons bx bx-detail"></i>
@@ -167,11 +172,11 @@
             <i class="bx bx-menu bx-sm"></i>
           </a>
         </div>
-
+ 
         <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
           <div class="">
             <div class="nav-item d-flex align-items-center">
-              <i class="blockquote"The Advanced ToolBox for a growing extended toolset for the LD platform accross Projects, Environments and Flags...</i>
+              <i class="blockquote">The Advanced ToolBox for a growing extended toolset for the LD platform accross Projects, Environments and Flags...</i>
             </div>
           </div>
           <ul class="navbar-nav flex-row align-items-center ms-auto">
@@ -232,7 +237,7 @@
 
         <!-- Content -->
         <div class="container-xxl flex-grow-1 container-p-y">
-
+            
             <!-- container for the 2 cards-->
             <div class="row gy-4" data-masonry='{"percentPosition": true }'> 
 
@@ -478,7 +483,7 @@ function validate(frm)
       s_ProjNames = document.getElementById("tfrm_projects").value;
       s_ProjMax = document.getElementById("tfrm_projmax").value;
       s_ProjMax = (s_ProjMax.length)==0 ? "0": s_ProjMax;
-      s_URL = 'http://localhost:8080/refresh|||' + s_srchcrit + ' |||' + s_ProjMax ;
+      s_URL = 'http://localhost:8080/refresh|||' + s_srchcrit + '|||' + s_ProjMax ;
       if (s_ProjMax == '0')
       {
         var strconfirm = confirm("This can run for hours with large LD implementations. \n Are you sure you want to continue?");

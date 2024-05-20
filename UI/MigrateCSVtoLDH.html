@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="light-style layout-footer-fixed layout-menu-collapsed" dir="ltr" data-theme="theme-default"
   data-assets-path="./assets/" data-template="vertical-menu-template-starter">
@@ -7,7 +6,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
 
-  <title>ToolBox4LD</title>
+  <title>ToolBox4LD - CSV2LD</title>
 
   <meta name="description" content="" />
 
@@ -44,7 +43,7 @@
 
 </head>
 
-<body onload="isLoggedIn();">
+<body onload="isLoggedIn();func_LoadValues();">
 
 <!-- Layout wrapper -->
 <div class="layout-wrapper layout-content-navbar">
@@ -54,7 +53,7 @@
 
      <!-- spinner-->
           <!-- Modal -->
-          <div class="modal" id="myModal" tabindex="-1">
+          <div class="modal fade" id="myModal" tabindex="-1">
             <div style="width:20%; height: 20%; align-self: center;">
               <!-- Spinner -->
               <div class="d-flex justify-content-center">
@@ -127,13 +126,13 @@
             <div data-i18n="Email">Refresh CRDB</div>
           </a>
         </li>
-        <li class="menu-item active">
+        <li class="menu-item">
           <a href="MigrateToLDH.html" class="menu-link">
             <i class="menu-icon tf-icons bx bx-detail"></i>
             <div data-i18n="Email">Migrate CRDB to LD</div>
           </a>
         </li>
-        <li class="menu-item">
+        <li class="menu-item active">
           <a href="MigrateCSVtoLDH.html" class="menu-link">
             <i class="menu-icon tf-icons bx bx-detail"></i>
             <div data-i18n="Email">Migrate CSV to LD</div>
@@ -243,26 +242,32 @@
               <!-- CARD #1: Form Elements -->
               <div class="col-md">
                 <div class="card text-white bg-secondary">
-                  <div class="card-header"><B>Migrate CRDB to LD Subscription</B></div>
+                  <div class="card-header"><B>Migrate CSV to LD Subscription</B></div>
                   <div class="card-body">
-                    <h5 class="card-title text-white">Filter updates by:</h5>
                     <p class="card-text">
                       <!-- **************** FORM *****************-->
                       <div height="5px" style="font-size: 3px;">&nbsp; </div> <!-- spacer-->
                       <div class="input-group input-group-lg">
                         <span class="input-group-text">Target API Key</span>
-                        <input value=" REMOVE-api-b9982943-81d5-40e7-800b-e735ac06280f" id="tfrm_api" type="text" class="form-control" placeholder="api-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx" />
+                        <!-- ###### REMOVE THIS IN PRODUCTION - PERSONAL LD Subscription ######-->
+                        <input value=" api-d5bb3095-3cd2-467d-a5fd-eb52409fce9e" id="tfrm_api" type="text" class="form-control" placeholder="api-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx" required/>
                       </div>
-                      <div height="5px" style="font-size: 6px;">&nbsp; </div> <!-- spacer-->
-                      <div class="input-group input-group-lg">
-                        <span class="input-group-text">Project ID Filter</span>
-                        <input id="tfrm_projects" type="text" class="form-control" placeholder="Project ID" value="" />
-                      </div>
-                      <div height="5px" style="font-size: 6px;">&nbsp; </div> <!-- spacer-->
-                      <div class="input-group input-group-lg">
-                        <span class="input-group-text">Environment ID Filter</span>
-                        <input id="tfrm_envs" type="text" class="form-control" placeholder="Environment ID" value="" />
-                      </div>
+                      
+                      <!--<div height="5px" style="font-size: 6px;">&nbsp; </div>--> <!-- spacer-->
+                      <!--<div class="input-group input-group-lg">
+                        <span class="input-group-text">Target Project ID</span>
+                        <input id="tfrm_projid" type="text" class="form-control" placeholder="Project ID" value="" required />
+                      </div>-->
+                      <form id="uploadForm" enctype="multipart/form-data">
+                          <div height="5px" style="font-size: 6px;">&nbsp; </div> <!-- spacer-->
+                          <div class="input-group input-group-lg">
+                          <!--<span class="input-group-text">CSV File on Google Drive</span>-->
+                          <input type="file" id="fileInput" name="csvFile" accept=".csv" class="form-control" placeholder="CSV File" required >
+                          <button type="submit" class="tf-icons bx me-1">Upload</button>
+                          <!--input id="tfrm_csvfile" type="text" class="form-control" placeholder="CSV File" value="" required /-->
+                          </div>
+                          <i id="csvLoaded"></i>
+                      </form>
                       <!-- More Fields goes here-->
                       <div height="5px" style="font-size: 6px;">&nbsp; </div> <!-- spacer-->
                       <div class="input-group mb-2">
@@ -283,10 +288,10 @@
                     
                     <div class="col-md-8">
                       <div class="card-body">
-                        <h5 class="card-title">Migrate CRDB to LD Subscription</h5>
+                        <h5 class="card-title">Migrate fromn a CSV file to LD Subscription</h5>
                         <p class="card-text">
-                          This function will call LD APIs to copy data from CRDB to a target LD subscription. 
-                          This will coopy Project, Environments and Flags and you can limit the migration by selecting a specific project to copy.
+                          This function will call LD APIs to create data from a CSV file to a project in a target LD subscription. 
+                          Helps to migrate from your home-grown flag system or other flag systems by creating Flags and setting thier meta data from a CSV file.
                           Due to API rate limiting, the avarage data migration is around 1 Second per Flag.
                         </p>
                       </div>
@@ -308,7 +313,7 @@
                 <p align="right"><i class="bx bx-abacus" style="color:#96a1e1"></i><B>Total Flag Count: </B> <i id="s_last_refresh">0 Flags</i></p>
                 <h5 class="card-title">Data Migration Results</h5>
                 <h6 id="lbl_functionstat" class="card-subtitle mb-2 text-muted">Function Idle...</h6>
-                <p id="lbl_functioninfo" id="results_line1" class="card-text">Click the start button to start migrating data from CRDB to LaunchDarkly subscription.</p>
+                <p id="lbl_functioninfo" class="card-text">Click the start button to start copying the CSV file to LaunchDarkly subscription.</p>
                 <p id="results_line2" class="card-text">
                   <!-- **************************************************************************** -->
                   
@@ -316,17 +321,17 @@
                 </p>
               </div>
             </div>
-            <div class="card" style="width: 100%; background-color:cadetblue;" >
+            <!--<div class="card" style="width: 100%; background-color:cadetblue;" >
               <div class="card-body">
                   <p id="Progress_line0" class="card-text" style="color:white;">Progress...</p>
-                  <p id="Progress_line" class="card-text" style="color:white;">
+                  <p id="Progress_line" class="card-text" style="color:white;">-->
                   <!-- **************************** Status **************************************** -->
                   
                   <!-- **************************************************************************** -->
-                </p>
+                <!--</p>
               </div>
             </div>
-          </div>
+          </div>-->
 
           </div> <!-- end of container for the 2 cards-->
 
@@ -396,53 +401,57 @@
   <!-- Main JS -->
   <script src="./assets/js/main.js"></script>
 
-
-<!--  ******************************* Execute and return the results to the page **********************************-->
-<!--            'http://localhost:8080/refresh|||API-KEY|||Project-ID'       --> the name search option is not yet implemented
 <script>
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-var g_FlagsCnt = 0;
-const getFlagCnt = async () => 
-  {
-      try
-      {
-          const response = await fetch('http://localhost:8080/cnt|||flags');
-          const myJson = await response.text(); //extract TEXT from the http response
-          g_FlagsCnt = Number(myJson);
-          document.getElementById('s_last_refresh').innerText = myJson + ' Flags';
-      }
-      catch(e){
-          const myJson = e.message;
-          document.getElementById('s_last_refresh').innerHTML = myJson;
-          console.log(e.message);
-      }
-  }
+
+//---------------------------------------------
+//-- display the migration results in a table
+//---------------------------------------------
+function displayResults(sData) 
+{
+    const data = JSON.parse(sData);
+    const isTrue = data[0];
+    const records = data[1];
+
+    if (isTrue) {
+        document.getElementById("lbl_functioninfo").innerText = "Function executed successfuly, running for " + s_tdiff + " milliseconds...";
+        const tableContainer = document.getElementById('results_line2');
+        let table = '<table><tr style="font:impact;style:bold;"><th style="background-color:lightgreen;">Code </th><th style="background-color:lightgray;"> Project.Flag </th><th style="background-color:lightgreen;"> Message</th></tr>';
+
+        records.forEach(record => {
+            table += `<tr>
+                <td style="background-color:lightgreen;">${record.code}</td>
+                <td style="background-color:lightgray;">${record.flag}</td>
+                <td style="background-color:lightgreen;">${record.message}</td>
+            </tr>`;
+        });
+
+        table += '</table>';
+        tableContainer.innerHTML = table;
+    } 
+    else 
+    {
+        console.log(sData);
+        document.getElementById("lbl_functioninfo").innerText = "FAILED, running for " + s_tdiff + " milliseconds...";
+    }
+}
+
+
+
 
 // ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
+// --- Start the migration by calling the es_main.py script
 // ---------------------------------------------------------------------------
   const asyncfunc_MigrateToLD = async () => 
   {
-
-      s_ProjNames = document.getElementById("tfrm_projects").value;
-      s_EnvNames = document.getElementById("tfrm_envs").value;
-
-      // Validate with user
-      if (document.getElementById('tfrm_projects').value == '')
+      //s_fileName = document.getElementById("tfrm_csvfile").value;
+      //s_ProjName = document.getElementById("tfrm_projid").value;  // target project in LD
+      s_targetLD = document.getElementById("tfrm_api").value; // target environment in LD
+      if (document.getElementById('fileInput').value == "")
       {
-        n_runtime = g_FlagsCnt / 60 * 2; // estimate 2 seconds per 1-flag copy
-        n_runtime = Math.round(n_runtime)
-        var strconfirm = confirm("The copy process can run for " + n_runtime + " minutes. \n Are you sure you want to continue?");
-        if (strconfirm == false)
-        {
-          return(0);
-        }
+        alert('File input cannot be empty...Please select a file to upload');
+        return false;
+        g_b_Migrate = false;
       }
-      // ******* run the streaming window to receive realtime updates *******
-      //func_startStreamT('status','Progress_line');
-      
       const d = new Date();
       let time = d.getTime();
       s_orig1 = document.getElementById("lbl_functionstat").innerText;
@@ -451,29 +460,23 @@ const getFlagCnt = async () =>
       document.getElementById("lbl_functioninfo").innerText = "NOW, Coying data from CRDB to LD, Please wait....";
       document.getElementById('myModal').classList.add('modal2');
       s_API = document.getElementById("tfrm_api").value;
-      s_URL = 'http://localhost:8080/copyld|||' + s_API + '|||' + s_ProjNames + '|||' + s_EnvNames ;
+      s_URL = 'http://localhost:8080/copyCSV2LD|||' + s_targetLD ;
      
-      
       try
       {
           const response = await fetch(s_URL);
           const myJson = await response.json(); //extract TEXT from the http response
-          
+          const oOutputJSON = JSON.parse(myJson);
+          console.log (myJson);
           const d2 = new Date();
           let time2 = d2.getTime();
           tdiff = time2-time;
           s_tdiff = tdiff.toLocaleString("en-US")
           document.getElementById('myModal').classList.remove('modal2');
           document.getElementById("lbl_functionstat").innerText = s_orig1;
-          if (myJson['status'] == 'False')
-          {
-            document.getElementById("lbl_functioninfo").innerText = "FAILED, running for " + s_tdiff + " milliseconds...";
-          }
-          else
-          {
-            document.getElementById("lbl_functioninfo").innerText = "Function executed successfuly, running for " + s_tdiff + " milliseconds...";
-          }
-          document.getElementById("results_line2").innerHTML = myJson['data'];
+          document.getElementById('s_last_refresh').innerHTML = oOutputJSON[1].length + ' Flags';
+          displayResults(myJson, s_tdiff);         
+          //document.getElementById("results_line2").innerHTML = myJson['data'];
           //func_closeStream();
       }
       catch(e){
@@ -487,27 +490,96 @@ const getFlagCnt = async () =>
       }
   }
   </script>
-  <script>getFlagCnt();</script>
 
-  <!--  ***************** Stream ***************** -->
+
   <script>
-    var evtSource;
-    var g_j_streamData = {};
-    var g_o_myWindow;
+    var g_s_uploadDir = "";
+    var g_b_Migrate = false;
+    //-------------------------------------------------------------------------------
+    //-------------------------------Read the values from the Settings File----------
+    //-------------------------------------------------------------------------------
+    const func_LoadValues = async () => 
+    {
+      s_srchPairs = ""; // not used in this context so its kept empty 
+        // ------ Start fetching the data
+        try
+          {
+            const response = await fetch('http://localhost:8080/settings|||2|||' + s_srchPairs);
+            const myJson = await response.json(); //extract TEXT from the http response
+            if (JSON.parse(myJson[0])['ErrorCode']!=0)
+            {
+              (JSON.parse(myJson[0])['Message']);
+            }
+            else
+            {
+              formFields = myJson[1];
+              let x = JSON.stringify(formFields);
+              let y = JSON.parse(x);
+              g_s_uploadDir =  y.incl_UploadDir;
+            }
+          }
+          catch
+          {
+            func_ShowAlert('Server not Running, Please Start Advanced ToolBox Server...', true);
+          }
+    }
 
-    function func_startStreamT(streamName, targetID)
-    {
-        
-        g_o_myWindow = window.open("showStreamH.html", "MonitorWindow", "width=300, height=300, left" + this.offsetLeft + ", top=" + this.offsetTop + ", menubar=no, scrollbars=yes,status=no, toolbar=no");
-        return true;
+      //-------------------------------------------------------------------------------------------------------- 
+      // ------ Upload the file to the server:  ----------------------------------------------------------------
+      // ------       this will attach the submit handler  -----------------------------------------------------
+      // ------       of the button to a function  -------------------------------------------------------------
+      //-------------------------------------------------------------------------------------------------------- 
+      document.getElementById('uploadForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var formData = new FormData();
+        var fileInput = document.getElementById('fileInput');
+        if (g_s_uploadDir == "")
+        {
+          alert('Cannot upload file. Please goto settings and configure the Upload Directory');
+          return false;
+          g_b_Migrate = false;
+        }
+        formData.append('csvFile', fileInput.files[0]);
+        formData.append('userID', s_userID);
+        formData.append('uploadDir', g_s_uploadDir);
+        g_b_Migrate = true;
+        upload(formData);
+      });
+
+      // ---------------------------------
+      // --- upload CSV file to server ---
+      //----------------------------------
+      async function upload(formData) {
+        if (g_b_Migrate == false)
+        {
+          alert('Cannot migrate data without selecting a CSV file for upload');
+          return false;
+        }
+        try {
+        const response = await fetch("http://127.0.0.1:9080/upload_csv", {
+          method: "POST",
+          body: formData
+          //mode: 'no-cors'
+        });
+        const result = await response.text();
+        if (result == "200")
+        {
+          document.getElementById("csvLoaded").innerHTML = "CSV file uploaded successfully";
+        }
+        else if (result == "400"){
+          document.getElementById("csvLoaded").innerHTML = "Empty source CSV file";
+        }
+        else
+        {
+          document.getElementById("csvLoaded").innerHTML = "Error occured while uploading CSV file: " + result;
+        }
+        console.log(result);
+      } catch (error) 
+      {
+        document.getElementById("csvLoaded").innerHTML = "Unknown error occured while uploading CSV file";
+      }
     }
-    
-    function func_closeStream()
-    {
-        evtSource.close();
-    }
-    
-    </script>
+  </script>
+
 </body>
-
 </html>

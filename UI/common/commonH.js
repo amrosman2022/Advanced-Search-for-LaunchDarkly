@@ -60,6 +60,7 @@ const isLoggedIn = async () =>
         const myJson = e.message;
         func_ShowAlert(myJson);
         console.log(e.message);
+        //window.open('index.html','_self');
         return (e);
       }
   }// End of isLoggedin
