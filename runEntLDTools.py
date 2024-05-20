@@ -1,3 +1,4 @@
+# Script file to run all the required files used for the platform. 
 import subprocess
 import time
 import os
