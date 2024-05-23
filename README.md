@@ -7,7 +7,7 @@ A video with the UI flow @"Adv Srch for LaunchDarkly quick overview.mp4" overvie
 <H4>V3</H4>Adds Data copy from CRDB to a new LaunchDarkly Subscription. <BR>
 <H4>V4</H4>Adds a standalone tool to copy Segments across Projects and Subscriptions. the tool is not yet integrated into the UI and runs on the command-line<BR>
 Adds a way to receive real-time status "Server-Sent-Events" from the backend to the frontend while long-running transactions are running the backend.<BR>
-<H4>V5</H4>Adds Data copy from CSV file to a project in a LaunchDarkly Subscription. <BR>
+<H4>V5</H4>Adds Data copy from CSV file* to a project in a LaunchDarkly Subscription. <BR>
 
 <h2> Technology</h2><br>
 Backend: built on Python 3.10 or above<br>
@@ -23,6 +23,7 @@ Database: SaaS CRDB instance<br>
   <LI>The first time you run the application (HTTP://...) you will need to create a user profile which will create a settings file on the Python App root directory </LI>
   <LI>The Settings file is encryped</LI>
   <LI>Please make sure you have installed locally (PIP3 ....) all the Python libraries used for the backend (requirements.txt)</LI> 
+  <LI>Example CSV Upload Structure.xlsx, you use this file to add the flags that will be imported and then export the file to CSV.</LI>
 </UL>
 
 <H2>Dependencies</H2>
